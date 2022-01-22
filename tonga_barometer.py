@@ -14,7 +14,7 @@ DB="sqlite3"
 home = (44.80321621050904, -63.62038361172844)
 hour_lead = 4
 hour_lag = 4
-smoothing_hours = 48
+smoothing_hours = 6
 highlight_hours = 6
 travel_speed = 0.32 # km/s
 
@@ -90,9 +90,10 @@ for row in result:
    ydata.append(row[1])
    
 # spline fit to remove base variations in pressure
-knots = np.linspace(np.min(tdata), np.max(tdata), (hour_lead+hour_lag)/smoothing_hours, endpoint=True)  # spline knot every N hours
+knots = np.linspace(np.min(tdata), np.max(tdata), (stop_time-start_time)/(3600*smoothing_hours), endpoint=True)  # spline knot every N hours
+
 smooth = splrep(x=tdata, y=ydata, task=-1, t=knots[4:-4]) # need to exclude exterior knots. Spline order is 3
-                        
+                       
 fig, ax = plt.subplots(figsize=(10,5))
 
 plt.text(tdata[0], np.max(ydata) + 0.05*(np.max(ydata) - np.min(ydata)), "location: %0.2f, %0.2f speed %3.0f m/s"
@@ -110,6 +111,7 @@ fig.subplots_adjust(bottom=0.3)
 
 ax.set_ylim( np.min(ydata), np.max(ydata))
 ax.plot(tdata, ydata, marker='.', markeredgecolor="paleturquoise", markerfacecolor='None', markersize=2, linestyle='None')
+ax.plot(knots, splev(knots, smooth), marker='+', color="blue", markersize=20, linestyle='None')
 ax.plot(tdata, splev(tdata, smooth), color="black", linewidth=1)
 
 ax2=ax.twinx()
