@@ -3,36 +3,82 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import sqlite3
 from geopy import distance
 from scipy.interpolate import splev, splrep
 
-# change as needed
+# change these paramters as desired
+# choose your backend database type
+DB="sqlite3"
+#DB="mysql"
+# your location latitude and longitude
 home = (44.80321621050904, -63.62038361172844)
+hour_lead = 4
+hour_lag = 4
+smoothing_hours = 48
+highlight_hours = 6
+
+# ------- normally shouldn't need to change anything below here ----------
+if DB == "sqlite3":
+    import sqlite3
+else:
+    import sys
+    import mysql.connector
+    from mysql.connector import errorcode as msqlerrcode
+    db_user="weewx"
+    db_pwd="insert-your-password"
+    db_name="weewx"
 
 hunga_tonga = (-20.5452074472518, -175.38715105641674)
 speed_of_sound = 0.32 # km/s
+earth_circumference=40040
 eruption_time = 1642220085 # 2022-01-15 04:14:45 UTC
-hour_lead = 24
-hour_lag = 120
 
 distance = distance.distance(hunga_tonga, home).km
 travel_time = distance / speed_of_sound
 arrival_time = eruption_time + travel_time
-start_time = 3600*(arrival_time // 3600 - hour_lead)  # start at an even hour
 
-print("distance to eruption %0.1f km arrival at %.0f (%s)" % (distance, arrival_time, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(arrival_time))))
+once_around = earth_circumference  / speed_of_sound
+opposite_wave_time = eruption_time + once_around - travel_time
+return_wave_time = eruption_time + once_around + travel_time
+
+start_time = 3600*(arrival_time // 3600 - hour_lead)  # start at an even hour
+stop_time = 3600*(return_wave_time // 3600 + hour_lag)
+
+print("distance to eruption %0.1f km\narrival at %.0f (%s)" %
+      (distance, arrival_time, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(arrival_time))))
+print("opposite pulse arrival at %.0f (%s)" %
+    ( opposite_wave_time , time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(opposite_wave_time))))
+print("second time around pulse arrival at %.0f (%s)" %
+    ( return_wave_time , time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(return_wave_time))))
+
+if DB == "sqlite3":
+    connection = sqlite3.connect('weewx.sdb')
+else:
+    try:
+        connection = mysql.connector.connect( user=db_user, password=db_pwd,
+                host='127.0.0.1', database=db_name)
+
+    except mysql.connector.Error as err:
+      if err.errno == msqlerrcode.ER_ACCESS_DENIED_ERROR:
+        print("Bad user name or password")
+      elif err.errno == msqlerrcode.ER_BAD_DB_ERROR:
+        print("Database does not exist")
+      else:
+        print(err)
+      sys.exit( 2)
       
-connection = sqlite3.connect('weewx.sdb')
 cursor = connection.cursor()
 
-query = "select datetime, barometer from archive where datetime > %.0f and datetime < %.0f order by dateTime;" % (start_time, arrival_time + hour_lag*3600)
+query = "select datetime, barometer from archive where datetime > %.0f and datetime < %.0f order by dateTime;" % (start_time, stop_time)
 print(query)
 cursor.execute(query).fetchall
 
 result = cursor.fetchall()
-
 connection.close()
+
+npoints = len(result)
+print( f"query returned {npoints} data points")
+if npoints == 0: exit
 
 xdata = []
 ydata = []
@@ -43,12 +89,8 @@ for row in result:
    tdata.append(mdates.datestr2num(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(row[0]))))
    ydata.append(row[1])
    
-# remove any linear trend
-coeff = np.polyfit(xdata, ydata, 2)
-trend = np.polyval(coeff, xdata)
-
-knots = np.linspace(np.min(tdata), np.max(tdata), (hour_lead+hour_lag)/6, endpoint=True)  # spline knot every 12 hours
-
+# spline fit to remove base variations in pressure
+knots = np.linspace(np.min(tdata), np.max(tdata), (hour_lead+hour_lag)/smoothing_hours, endpoint=True)  # spline knot every N hours
 smooth = splrep(x=tdata, y=ydata, task=-1, t=knots[4:-4]) # need to exclude exterior knots. Spline order is 3
                         
 fig, ax = plt.subplots()
@@ -64,11 +106,21 @@ ax.xaxis.set_minor_locator(mdates.MinuteLocator(interval = 15))
 
 fig.subplots_adjust(bottom=0.2)
 
+ax.set_ylim( np.min(ydata), np.max(ydata))
 ax.plot(tdata, ydata, color="paleturquoise", linewidth=3)
 ax.plot(tdata, splev(tdata, smooth), color="black", linewidth=1)
 
 ax2=ax.twinx()
 ax2.plot(tdata, ydata-splev(tdata, smooth), linewidth=1)
+
+peakt = [
+    mdates.datestr2num(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(arrival_time))),
+    mdates.datestr2num(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(opposite_wave_time))),
+    mdates.datestr2num(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(return_wave_time)))
+]
+
+bar_height = np.max(ydata)
+ax.bar( peakt, [bar_height, bar_height, bar_height] , width=0.25/highlight_hours, color="lightgrey" )  
 
 # save the plot as a file
 fig.savefig('./hunga_tonga.png', format='png', dpi=100, bbox_inches='tight')
