@@ -95,7 +95,7 @@ smooth = splrep(x=tdata, y=ydata, task=-1, t=knots[4:-4]) # need to exclude exte
                         
 fig, ax = plt.subplots()
 
-plt.text(tdata[1], np.max(ydata), "location: %0.2f, %0.2f" % home)
+plt.text(tdata[1], np.max(ydata) - 0.05*(np.max(ydata) - np.min(ydata)), "location: %0.2f, %0.2f" % home)
 
 date_formatter = mdates.DateFormatter('%m-%d %H:%M')
 ax.tick_params(axis="x", rotation=90)
@@ -120,7 +120,13 @@ peakt = [
 ]
 
 bar_height = np.max(ydata)
-ax.bar( peakt, [bar_height, bar_height, bar_height] , width=0.25/highlight_hours, color="lightgrey" )  
+annotation_y = np.min(ydata) + 0.05*(np.max(ydata) - np.min(ydata))
+
+b1 = ax.bar( peakt, [bar_height, bar_height, bar_height] , width=0.25/highlight_hours, color="lightgrey" )
+ax.annotate("Initial", xy=(peakt[0], annotation_y))
+ax.annotate("Reverse", xy=(peakt[1], annotation_y))
+ax.annotate("Second", xy=(peakt[2], annotation_y))
+
 
 # save the plot as a file
 fig.savefig('./hunga_tonga.png', format='png', dpi=100, bbox_inches='tight')
