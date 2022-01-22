@@ -93,7 +93,7 @@ for row in result:
 knots = np.linspace(np.min(tdata), np.max(tdata), (hour_lead+hour_lag)/smoothing_hours, endpoint=True)  # spline knot every N hours
 smooth = splrep(x=tdata, y=ydata, task=-1, t=knots[4:-4]) # need to exclude exterior knots. Spline order is 3
                         
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(10,4))
 
 plt.text(tdata[1], np.max(ydata) - 0.05*(np.max(ydata) - np.min(ydata)), "location: %0.2f, %0.2f" % home)
 
