@@ -107,7 +107,7 @@ ax.xaxis.set_minor_locator(mdates.MinuteLocator(interval = 15))
 fig.subplots_adjust(bottom=0.2)
 
 ax.set_ylim( np.min(ydata), np.max(ydata))
-ax.plot(tdata, ydata, color="paleturquoise", linewidth=3)
+ax.plot(tdata, ydata, marker='.', markeredgecolor="paleturquoise", markerfacecolor='None', markersize=2, linestyle='None')
 ax.plot(tdata, splev(tdata, smooth), color="black", linewidth=1)
 
 ax2=ax.twinx()
