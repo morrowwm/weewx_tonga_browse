@@ -16,6 +16,7 @@ hour_lead = 4
 hour_lag = 4
 smoothing_hours = 48
 highlight_hours = 6
+travel_speed = 0.32 # km/s
 
 # ------- normally shouldn't need to change anything below here ----------
 if DB == "sqlite3":
@@ -29,15 +30,14 @@ else:
     db_name="weewx"
 
 hunga_tonga = (-20.5452074472518, -175.38715105641674)
-speed_of_sound = 0.32 # km/s
 earth_circumference=40040
 eruption_time = 1642220085 # 2022-01-15 04:14:45 UTC
 
 distance = distance.distance(hunga_tonga, home).km
-travel_time = distance / speed_of_sound
+travel_time = distance / travel_speed
 arrival_time = eruption_time + travel_time
 
-once_around = earth_circumference  / speed_of_sound
+once_around = earth_circumference  / travel_speed
 opposite_wave_time = eruption_time + once_around - travel_time
 return_wave_time = eruption_time + once_around + travel_time
 
@@ -95,7 +95,8 @@ smooth = splrep(x=tdata, y=ydata, task=-1, t=knots[4:-4]) # need to exclude exte
                         
 fig, ax = plt.subplots(figsize=(10,5))
 
-plt.text(tdata[1], np.max(ydata) - 0.05*(np.max(ydata) - np.min(ydata)), "location: %0.2f, %0.2f" % home)
+plt.text(tdata[0], np.max(ydata) + 0.05*(np.max(ydata) - np.min(ydata)), "location: %0.2f, %0.2f speed %3.0f m/s"
+         % (home[0], home[1], travel_speed*1000.0))
 
 date_formatter = mdates.DateFormatter('%m-%d %H:%M')
 ax.set_ylabel('barometric pressure (hPa)')
