@@ -93,24 +93,26 @@ for row in result:
 knots = np.linspace(np.min(tdata), np.max(tdata), (hour_lead+hour_lag)/smoothing_hours, endpoint=True)  # spline knot every N hours
 smooth = splrep(x=tdata, y=ydata, task=-1, t=knots[4:-4]) # need to exclude exterior knots. Spline order is 3
                         
-fig, ax = plt.subplots(figsize=(10,4))
+fig, ax = plt.subplots(figsize=(10,5))
 
 plt.text(tdata[1], np.max(ydata) - 0.05*(np.max(ydata) - np.min(ydata)), "location: %0.2f, %0.2f" % home)
 
 date_formatter = mdates.DateFormatter('%m-%d %H:%M')
+ax.set_ylabel('barometric pressure (hPa)')
 ax.tick_params(axis="x", rotation=90)
 ax.xaxis.set_major_locator(mdates.HourLocator(interval = 4))
 ax.xaxis.set_major_formatter(date_formatter)
 ax.xaxis.set_minor_locator(mdates.MinuteLocator(interval = 15))
 #ax.set_xlim(xmin=tdata[0]//1) # start at a round hour
 
-fig.subplots_adjust(bottom=0.2)
+fig.subplots_adjust(bottom=0.3)
 
 ax.set_ylim( np.min(ydata), np.max(ydata))
 ax.plot(tdata, ydata, marker='.', markeredgecolor="paleturquoise", markerfacecolor='None', markersize=2, linestyle='None')
 ax.plot(tdata, splev(tdata, smooth), color="black", linewidth=1)
 
 ax2=ax.twinx()
+ax2.set_ylabel('extracted feature (hPa)')
 ax2.plot(tdata, ydata-splev(tdata, smooth), linewidth=1)
 
 peakt = [
