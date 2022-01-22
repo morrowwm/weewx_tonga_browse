@@ -14,7 +14,7 @@ DB="sqlite3"
 home = (44.80321621050904, -63.62038361172844)
 hour_lead = 4
 hour_lag = 4
-smoothing_hours = 6
+smoothing_hours = 4
 highlight_hours = 6
 travel_speed = 0.32 # km/s
 
@@ -91,7 +91,11 @@ for row in result:
    
 # spline fit to remove base variations in pressure
 knots = np.linspace(np.min(tdata), np.max(tdata), (stop_time-start_time)/(3600*smoothing_hours), endpoint=True)  # spline knot every N hours
-
+print(knots)
+if len(knots) < 9:
+    print("Smoothing length of %.0f is too long for curve fit. Try %.0f."
+          % (smoothing_hours, ((stop_time-start_time)/3600)/12))
+    exit()
 smooth = splrep(x=tdata, y=ydata, task=-1, t=knots[4:-4]) # need to exclude exterior knots. Spline order is 3
                        
 fig, ax = plt.subplots(figsize=(10,5))
