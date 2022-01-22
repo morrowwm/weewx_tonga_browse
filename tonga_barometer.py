@@ -69,7 +69,7 @@ else:
       
 cursor = connection.cursor()
 
-query = "select datetime, barometer from archive where datetime > %.0f and datetime < %.0f order by dateTime;" % (start_time, stop_time)
+query = "select datetime, barometer from archive where datetime > %.0f and datetime < %.0f and barometer is not null order by dateTime;" % (start_time, stop_time)
 print(query)
 cursor.execute(query).fetchall
 
