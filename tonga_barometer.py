@@ -14,11 +14,14 @@ DB="sqlite3"
 home = (44.80321621050904, -63.62038361172844)
 hour_lead = 4
 hour_lag = 4
-smoothing_hours = 4
+smoothing_hours = 10
 highlight_hours = 6
 travel_speed = 0.32 # km/s
 
 # ------- normally shouldn't need to change anything below here ----------
+raw_data_color = "black"
+extracted_data_color = "green"
+
 if DB == "sqlite3":
     import sqlite3
 else:
@@ -71,7 +74,7 @@ cursor = connection.cursor()
 
 query = "select datetime, barometer from archive where datetime > %.0f and datetime < %.0f and barometer is not null order by dateTime;" % (start_time, stop_time)
 print(query)
-cursor.execute(query).fetchall
+cursor.execute(query)
 
 result = cursor.fetchall()
 connection.close()
@@ -91,19 +94,20 @@ for row in result:
    
 # spline fit to remove base variations in pressure
 knots = np.linspace(np.min(tdata), np.max(tdata), (stop_time-start_time)/(3600*smoothing_hours), endpoint=True)  # spline knot every N hours
-print(knots)
-if len(knots) < 9:
-    print("Smoothing length of %.0f is too long for curve fit. Try %.0f."
-          % (smoothing_hours, ((stop_time-start_time)/3600)/12))
+#print(knots)
+if len(knots) < 1:
+    print("Smoothing length of %.0f is too long for curve fit. Try %.0f hours or less."
+          % (smoothing_hours, ((stop_time-start_time)/3600)))
     exit()
-smooth = splrep(x=tdata, y=ydata, task=-1, t=knots[4:-4]) # need to exclude exterior knots. Spline order is 3
+smooth = splrep(x=tdata, y=ydata, task=-1, t=knots[1:-1]) # need to exclude exterior knots. Spline order is 3
                        
 fig, ax = plt.subplots(figsize=(10,5))
 
-plt.text(tdata[0], np.max(ydata) + 0.05*(np.max(ydata) - np.min(ydata)), "location: %0.2f, %0.2f speed %3.0f m/s"
+plt.text(tdata[0], np.max(ydata) + 0.05*(np.max(ydata) - np.min(ydata)), "location: %0.1f, %0.1f speed %3.0f m/s"
          % (home[0], home[1], travel_speed*1000.0))
 
 date_formatter = mdates.DateFormatter('%m-%d %H:%M')
+ax.yaxis.label.set_color(raw_data_color)
 ax.set_ylabel('barometric pressure (hPa)')
 ax.tick_params(axis="x", rotation=90)
 ax.xaxis.set_major_locator(mdates.HourLocator(interval = 4))
@@ -115,12 +119,13 @@ fig.subplots_adjust(bottom=0.3)
 
 ax.set_ylim( np.min(ydata), np.max(ydata))
 ax.plot(tdata, ydata, marker='.', markeredgecolor="paleturquoise", markerfacecolor='None', markersize=2, linestyle='None')
-ax.plot(knots, splev(knots, smooth), marker='+', color="blue", markersize=20, linestyle='None')
+ax.plot(knots, splev(knots, smooth), marker='+', color="black", markersize=20, linestyle='None')
 ax.plot(tdata, splev(tdata, smooth), color="black", linewidth=1)
 
 ax2=ax.twinx()
+ax2.yaxis.label.set_color(extracted_data_color)
 ax2.set_ylabel('extracted feature (hPa)')
-ax2.plot(tdata, ydata-splev(tdata, smooth), linewidth=1)
+ax2.plot(tdata, ydata-splev(tdata, smooth), color="green", linewidth=1)
 
 peakt = [
     mdates.datestr2num(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(arrival_time))),
