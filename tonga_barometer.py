@@ -11,7 +11,7 @@ from scipy.interpolate import splev, splrep
 DB="sqlite3"
 #DB="mysql"
 # your location latitude and longitude
-home = (44.80321621050904, -63.62038361172844)
+home = (44.8, -63.6)
 hour_lead = 4
 hour_lag = 4
 smoothing_hours = 4
@@ -55,7 +55,7 @@ print("second time around pulse arrival at %.0f (%s)" %
     ( return_wave_time , time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(return_wave_time))))
 
 if DB == "sqlite3":
-    connection = sqlite3.connect('weewx.sdb')
+    connection = sqlite3.connect('/var/lib/weewx/weewx.sdb')
 else:
     try:
         connection = mysql.connector.connect( user=db_user, password=db_pwd,
